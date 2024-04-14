@@ -6,6 +6,9 @@
 5. Car Chargers afaik only work with whole numbers for the current value
 6. Added a toggle on margin setting to avoid on/off sequences
 7. Added a setting to for inverter limited PV systems
-   
+
+EDITS BY GFKSolar:
+1. Round excess rather up then down, useful when u have a batterysystem to use up the even the last bit of excess! If you dont have a battery use the old Code with math.floor
+
 # Find the original repository here
 https://github.com/InventoCasa/ha-advanced-blueprints/
