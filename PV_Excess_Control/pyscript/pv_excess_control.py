@@ -3,7 +3,6 @@
 # Automations can be deactivated correctly from the UI!
 # -------------------------------------------------
 from typing import Union
-import math
 
 
 def _get_state(entity_id: str) -> Union[str, None]:
@@ -150,6 +149,7 @@ def pv_excess_control(automation_id, appliance_priority, export_power, pv_power,
     automation_id = automation_id[11:] if automation_id[:11] == 'automation.' else automation_id
     automation_id = _replace_vowels(f"automation.{automation_id.strip().replace(' ', '_').lower()}")
 
+
     PvExcessControl(automation_id, appliance_priority, export_power, pv_power,
                     load_power, home_battery_level, min_home_battery_level,
                     dynamic_current_appliance, appliance_phases, min_current,
@@ -187,7 +187,7 @@ class PvExcessControl:
     #  NOTE: Should be slightly negative, to compensate for inaccurate power corrections
     #  WARNING: Do net set this to more than 0, otherwise some devices with dynamic current control will abruptly get switched off in some
     #  situations.
-    min_excess_power = -10
+    min_excess_power = -350
     on_time_counter = 0
 
 
@@ -308,8 +308,8 @@ class PvExcessControl:
                     if avg_excess_power >= PvExcessControl.min_excess_power and inst.dynamic_current_appliance:
                         # try to increase dynamic current, because excess solar power is available
                         prev_amps = _get_num_state(inst.appliance_current_set_entity, return_on_error=inst.min_current)
-                        ## wallboxes usually can do only whole amp numbers - round down
-                        excess_amps = math.floor(avg_excess_power / (PvExcessControl.grid_voltage * inst.phases) + prev_amps)
+                        ## wallboxes usually can do only whole amp numbers - round up
+                        excess_amps = round(avg_excess_power / (PvExcessControl.grid_voltage * inst.phases), 0) + prev_amps
                         amps = max(inst.min_current, min(excess_amps, inst.max_current))
                         if amps > (prev_amps+0.09):
                             _set_value(inst.appliance_current_set_entity, amps)
@@ -361,11 +361,12 @@ class PvExcessControl:
                         # check if current of dyn. curr. appliance can be reduced
                         if inst.dynamic_current_appliance:
                             if inst.actual_power is None:
-                                actual_current = _get_num_state(inst.appliance_current_set_entity, return_on_error=inst.min_current)
+                                                                actual_current = round((inst.defined_current * PvExcessControl.grid_voltage * inst.phases) / (PvExcessControl.grid_voltage * inst.phases), 0)
+																					   
                             else:
-                                actual_current = round(_get_num_state(inst.actual_power) / (PvExcessControl.grid_voltage * inst.phases), 1)
+                                actual_current = round(_get_num_state(inst.actual_power) / (PvExcessControl.grid_voltage * inst.phases), 0)
                             # round down to avoid overshooting
-                            diff_current = math.floor(avg_excess_power / (PvExcessControl.grid_voltage * inst.phases))
+                            diff_current = round(avg_excess_power / (PvExcessControl.grid_voltage * inst.phases), 0)
                             target_current = max(inst.min_current, actual_current + diff_current)
                             log.debug(f'{log_prefix} {actual_current=}A | {diff_current=}A | {target_current=}A')
                             if inst.min_current < target_current < actual_current:
@@ -424,6 +425,7 @@ class PvExcessControl:
             if PvExcessControl.import_export_power:
                 # Calc values based on combined import/export power sensor
                 import_export = int(_get_num_state(PvExcessControl.import_export_power))
+												   
                 export_pwr = abs(min(0, import_export))
                 excess_pwr = int(current_pv_pwr - _get_num_state(PvExcessControl.load_power))
             else:
@@ -462,6 +464,15 @@ class PvExcessControl:
 
 
     def sanity_check(self) -> bool:
+																											  
+																																			
+																															
+					   
+																										   
+																										
+																																
+																													
+						
         if not (PvExcessControl.import_export_power is not None or (PvExcessControl.export_power is not None and
                                                                     PvExcessControl.load_power is not None)):
             log.error('Either "Export power" or "Load power" have not been defined. This is not '
